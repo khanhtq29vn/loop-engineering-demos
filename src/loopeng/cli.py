@@ -6,6 +6,9 @@ import json
 import os
 from pathlib import Path
 import sys
+import webbrowser
+
+from loopeng.report_html import write_html, write_se_comparison
 
 from loopeng.core import InjectedInterruption
 from loopeng.demo_rd.pipeline import run as run_research
@@ -30,7 +33,9 @@ def build_parser() -> argparse.ArgumentParser:
     software.add_argument("--max-elapsed", type=float, default=120.0)
     software.add_argument("--resume", metavar="RUN_ID")
     software.add_argument("--out", type=Path, default=Path("runs"))
-    software.add_argument("--live", action="store_true", help="Show event stream during execution")
+    software.add_argument("--live", action="store_true", help="Raw event stream (original behavior)")
+    software.add_argument("--presentation", action="store_true", help="Readable, evidence-first event stream and HTML report")
+    software.add_argument("--open-report", action="store_true", help="Open the generated local HTML report after the run")
 
     research = commands.add_parser("rd", help="Bounded ML experimentation loop")
     research.add_argument("--backend", choices=["offline", "openrouter"], default="offline")
@@ -40,7 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
     research.add_argument("--max-elapsed", type=float, default=120.0)
     research.add_argument("--resume", metavar="RUN_ID")
     research.add_argument("--out", type=Path, default=Path("runs"))
-    research.add_argument("--live", action="store_true", help="Show event stream during execution")
+    research.add_argument("--live", action="store_true", help="Raw event stream (original behavior)")
+    research.add_argument("--presentation", action="store_true", help="Readable, evidence-first event stream and HTML report")
+    research.add_argument("--open-report", action="store_true", help="Open the generated local HTML report after the run")
 
     preflight = commands.add_parser("preflight", help="Check OpenRouter key and model")
     preflight.add_argument(
@@ -48,11 +55,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report = commands.add_parser("report", help="Display a saved run summary")
     report.add_argument("run_dir", type=Path)
+    report.add_argument("--html", action="store_true", help="Generate a self-contained, offline HTML report")
+    report.add_argument("--open", action="store_true", help="Open HTML report in your default browser (requires --html)")
+    compare = commands.add_parser("compare-se", help="Evidence-based SE ablation comparison (prepared offline runs only)")
+    compare.add_argument("first_run", type=Path)
+    compare.add_argument("second_run", type=Path)
+    compare.add_argument("--open", action="store_true", help="Open the local comparison in your browser")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    previous_live = os.environ.get("LOOPENG_LIVE")
+    previous_presentation = os.environ.get("LOOPENG_PRESENTATION")
     try:
         if args.command == "preflight":
             from loopeng.backends import OpenRouterChat
@@ -79,15 +94,38 @@ def main(argv: list[str] | None = None) -> int:
                 print("BILLABLE PROBE:", json.dumps({"result": answer, "usage": usage}, indent=2))
             return 0
 
+        if args.command == "compare-se":
+            path = write_se_comparison(args.first_run, args.second_run)
+            print(f"Policy comparison: {path}")
+            if args.open:
+                webbrowser.open(path.as_uri())
+            return 0
+
         if args.command == "report":
+            if args.open and not args.html:
+                raise ValueError("--open requires --html")
+            if args.html:
+                report_path = write_html(args.run_dir)
+                print(f"Visual report: {report_path}")
+                if args.open:
+                    webbrowser.open(report_path.as_uri())
+                return 0
             summary = args.run_dir / "summary.json"
             if not summary.is_file():
                 raise FileNotFoundError(f"Summary not found: {summary}")
             print(summary.read_text(encoding="utf-8"))
             return 0
 
-        if args.live:
+        # Preserve the original --live output when --presentation is absent.
+        if args.presentation:
+            os.environ["LOOPENG_PRESENTATION"] = "1"
             os.environ["LOOPENG_LIVE"] = "1"
+        elif args.live:
+            os.environ.pop("LOOPENG_PRESENTATION", None)
+            os.environ["LOOPENG_LIVE"] = "1"
+        else:
+            os.environ.pop("LOOPENG_PRESENTATION", None)
+            os.environ.pop("LOOPENG_LIVE", None)
         if args.command == "se":
             sandbox = (
                 "docker" if args.backend == "openrouter" else "trusted_local"
@@ -140,6 +178,11 @@ def main(argv: list[str] | None = None) -> int:
                     f"selected={holdout['selected']['f1']:.4f}"
                 )
         print(f"Artifacts: {store.directory}")
+        if args.presentation or args.open_report:
+            report_path = write_html(store.directory)
+            print(f"Visual report: {report_path}")
+            if args.open_report:
+                webbrowser.open(report_path.as_uri())
         return 0 if state["status"] in ("ACCEPTED", "SEARCH_COMPLETE", "SINGLE_PASS_COMPLETE") else 4
     except InjectedInterruption as exc:
         print(str(exc), file=sys.stderr)
@@ -151,6 +194,14 @@ def main(argv: list[str] | None = None) -> int:
     except KeyboardInterrupt:
         print("Interrupted; check the run directory before deciding whether to resume.", file=sys.stderr)
         return 130
+    finally:
+        # Do not leak presentation settings into other CLI calls from the same process.
+        for name, old in (("LOOPENG_LIVE", previous_live),
+                          ("LOOPENG_PRESENTATION", previous_presentation)):
+            if old is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = old
 
 
 if __name__ == "__main__":

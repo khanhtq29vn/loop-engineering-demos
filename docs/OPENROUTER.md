@@ -69,7 +69,7 @@ The probe submits a tiny strict-schema request to `POST /chat/completions`. It p
 ## 4. Demo 2: live research configuration search
 
 ```bash
-loopeng rd --backend openrouter --mode governed --seed 2026 --max-attempts 3 --max-elapsed 120 --live
+loopeng rd --backend openrouter --mode governed --seed 2026 --max-attempts 3 --max-elapsed 120 --presentation
 ```
 
 The model proposes a JSON object containing `feature_map`, `lr`, `l2`, and `epochs`. The orchestrator rejects unknown keys, nonfinite numbers, out-of-range values and unexpected types. Trusted Python code fits the classifier and evaluates validation F1; held-out data is accessed once *after* selection finishes. See [EXPERIMENTS.md](EXPERIMENTS.md) for limitations.
@@ -87,14 +87,14 @@ docker image inspect python:3.12-slim
 loopeng se --backend offline --sandbox docker --mode governed --max-attempts 3 --live
 
 # Only then attempt model-generated code:
-loopeng se --backend openrouter --sandbox docker --mode governed --max-attempts 3 --max-elapsed 120 --live
+loopeng se --backend openrouter --sandbox docker --mode governed --max-attempts 3 --max-elapsed 120 --presentation
 ```
 
 For live source, the model proposes only `ledger.py`. The engine checks path, source size, AST shape and allowed top-level imports; stages a source file, writes its SHA-256 hash and a diff, and runs public checks first and separate acceptance checks only after public PASS. For runtime isolation it uses Docker with no network, a read-only filesystem and candidate mount, dropped capabilities, a non-root user and resource limits. **This is defense-in-depth, not a guarantee of safe execution of malicious Python.** Do not run on a privileged or sensitive host; prefer a disposable VM. See [SECURITY.md](../SECURITY.md).
 
 ## 6. Results, recovery and cost awareness
 
-Every invocation writes its own `runs/<run-id>/` directory. Run `loopeng report runs/<run-id>` to display the JSON summary. Use `--resume <run-id>` with the **same backend, seed (for research), mode, sandbox (for software), and outputs directory** for a staged/interrupted run. Resume does not guarantee exactly-once external model inference: a network timeout may have consumed credits even when no response was received.
+Every invocation writes its own `runs/<run-id>/` directory. `--presentation` prints simplified evidence statements and generates a local `report.html` without extra API calls; it can optionally open the report with `--open-report`. The original `--live` mode still produces raw event JSON. Run `loopeng report runs/<run-id>` to display the JSON summary or `loopeng report runs/<run-id> --html --open` to generate/open a self-contained visual evidence report. Use `--resume <run-id>` with the **same backend, seed (for research), mode, sandbox (for software), and outputs directory** for a staged/interrupted run. Resume does not guarantee exactly-once external model inference: a network timeout may have consumed credits even when no response was received.
 
 The adapter does **not** automatically retry failed API requests. The orchestrator increments `api_calls` before sending each request, and a run stops after the configured attempt/API budget. Token usage and USD cost are included only when the provider reports them; values can be absent and should not be mistaken for a hard spending cap. Set a dedicated key limit/guardrail at OpenRouter.
 

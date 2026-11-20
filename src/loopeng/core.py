@@ -132,7 +132,12 @@ class RunStore:
 
     def event(self, kind: str, data: dict | None = None) -> None:
         entry = {"time_utc": utcnow(), "event": kind, "data": data or {}}
-        if os.environ.get("LOOPENG_LIVE") == "1":
+        if os.environ.get("LOOPENG_PRESENTATION") == "1":
+            from loopeng.presentation import format_event
+            line = format_event(kind, data)
+            if line is not None:
+                print("[LOOP] " + line, flush=True)
+        elif os.environ.get("LOOPENG_LIVE") == "1":
             visible = {
                 "RUN_CREATED", "BASELINE_STAGED", "CANDIDATE_STAGED",
                 "VERIFIER_RESULT", "PROPOSAL_REJECTED", "POLICY_DENIED",

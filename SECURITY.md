@@ -12,6 +12,14 @@ This is an educational research demo. **It is not a hardened, production-grade u
 - **Public repo caveat:** the acceptance vectors are readable in the public source. They are withheld from prompt/container, not cryptographically secret. A model trained on or given the repository might already know them. This is not a private benchmark.
 - Run artifacts include generated source and model metadata. `runs/` is ignored by Git. Review contents before sharing with third parties.
 
+## Local HTML evidence reports
+
+- `report.html` / `comparison.html` are generated offline from whitelisted fields of the local `summary.json`. They do not read candidate source code, raw prompt bodies or acceptance vectors.
+- Dynamic content is HTML-escaped; the static page uses a restrictive CSP, inline CSS and no JavaScript or external assets. Opening it does not submit data to a network service.
+- Reports intentionally show model IDs, reported cost and run IDs when supplied. Run IDs and local reports can still disclose non-secret operational metadata: **review before sharing screenshots or files**.
+- Untrusted or oversized run summaries are rejected. The viewer does not authenticate or cryptographically attest provenance: it displays the user-supplied local summary, not a remote trusted log.
+- Audience presentation mode changes terminal formatting only; verifier, policy and execution permissions remain unchanged.
+
 ## OpenRouter and spend controls
 
 - No API key is hardcoded, echoed in errors, or saved to a run artifact.

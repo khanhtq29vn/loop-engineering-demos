@@ -46,7 +46,7 @@ loopeng rd --backend offline --mode governed --seed 2026
 python -m unittest discover -s tests -v
 ```
 
-`runs/` contains new run IDs; report outcomes with `loopeng report runs/<run-id>`. Filenames and timestamps may differ, while deterministic reference scores and decisions should match when the environment and Python implementation are compatible. The implementation intentionally requires no GPU or ML framework.
+`runs/` contains new run IDs; report outcomes with `loopeng report runs/<run-id>`. Filenames and timestamps may differ, while deterministic reference scores and decisions should match when the environment and Python implementation are compatible. The HTML evidence report is produced from `summary.json` and has no impact on the experimental protocol. The `compare-se` command verifies candidate/result prefix identity before showing a policy contrast; this is not a statistical study of different LLM policies. The implementation intentionally requires no GPU or ML framework.
 
 ## Research context — selected primary material
 

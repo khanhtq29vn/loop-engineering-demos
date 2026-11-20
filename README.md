@@ -2,6 +2,8 @@
 
 **A runnable reference implementation of proposal → execution → independent verification → selection/stop.**
 
+**New in v1.1:** audience-readable live event narration, a local self-contained visual report for both demos, and a verified policy-ablation comparison for the software example. Neither enhancement affects candidate generation, verification or acceptance. See [Visual Reports](docs/VISUAL_REPORTS.md).
+
 This repository accompanies the *Loop Engineering: Formalization, Core Architectures, and Applications in Autonomous R&D* research keynote. It is a **public, educational, reproducible implementation**, not a benchmark, a production autonomous research platform, or a demonstration that an LLM always succeeds.
 
 The project contains exactly two experiments:
@@ -46,9 +48,41 @@ loopeng se --backend offline --mode governed --live
 loopeng rd --backend offline --mode governed --seed 2026 --live
 ```
 
-Both runs create a new unique run ID under `runs/` (ignored by Git). `summary.json` contains the result, `state.json` the checkpoint, `events.jsonl` the journal. The research run also saves `trajectory.csv`, `trajectory.svg`, and `experiment_manifest.json`.
+Both runs create a new unique run ID under `runs/` (ignored by Git). `summary.json` contains the result, `state.json` the checkpoint, `events.jsonl` the journal. With `--presentation`, a readable static `report.html` is also generated. The research run also saves `trajectory.csv`, `trajectory.svg`, and `experiment_manifest.json`.
 
 **These offline proposals are preauthored for pedagogy.** They exercise real verification, state and selection logic, but do **not** measure an autonomous LLM's ability to discover fixes or research hypotheses.
+
+### Visualize the evidence (recommended for first-time readers)
+
+The original `--live` JSON event stream remains unchanged. Add `--presentation` for concise, readable event narration **and** an automatically generated `report.html` after the run:
+
+```bash
+loopeng rd --backend offline --seed 2026 --mode governed --presentation
+loopeng se --backend offline --mode governed --presentation
+```
+
+The terminal prints the artifact directory and exact path of `report.html`. Open that file locally in your browser, or use `--open-report` to open it automatically **after the run finishes** (desktop environment required):
+
+```bash
+loopeng rd --backend offline --mode governed --presentation --open-report
+
+# HTML report from an existing run, with no model call or test execution:
+loopeng report runs/<run-id> --html --open
+```
+
+The offline HTML contains no external scripts, external stylesheets or network requests. The report marks `LIVE MODEL PROPOSALS` versus `PREAUTHORED OFFLINE CANDIDATES` and separates validation selection from held-out evaluation. It is a read-only view of `summary.json`, not a new verifier.
+
+You can also compare the **same prepared software candidates** under two different acceptance policies:
+
+```bash
+loopeng se --backend offline --mode feedback_only
+loopeng se --backend offline --mode governed
+
+# Copy the two printed run directories into the command below:
+loopeng compare-se runs/<feedback-run-id> runs/<governed-run-id> --open
+```
+
+The comparison refuses model-generated/stochastic sequences or mismatched candidates; it only illustrates the effect of the acceptance policy when the checked evidence is shared. Read [Visual Reports](docs/VISUAL_REPORTS.md) for exact semantics, limits and troubleshooting.
 
 ### Reference results — reproducible, not live model claims
 
@@ -109,6 +143,7 @@ loopeng report runs/<run-id>
 - [Architecture and invariant checks](docs/ARCHITECTURE.md)
 - [OpenRouter setup and troubleshooting](docs/OPENROUTER.md)
 - [Reproducibility, measurement and scope](docs/EXPERIMENTS.md)
+- [Visual reports and policy comparison](docs/VISUAL_REPORTS.md)
 - [Security model and limitations](SECURITY.md)
 
 ### Project layout
