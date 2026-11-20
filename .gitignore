@@ -1,0 +1,18 @@
+# Runtime outputs may include model-generated code, user-provided inputs, or metadata.
+runs/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+build/
+dist/
+*.egg-info/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.idea/
+.vscode/
